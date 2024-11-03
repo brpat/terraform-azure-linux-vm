@@ -13,7 +13,7 @@ To use this module, create a Terraform configuration file and include the module
 
 ```hcl
 module "linux_vm" {
-  source                    = "git::https://github.com/brpat/terraform-azure-linux-vm.git?ref=v1.0"
+  source                    = "git::https://github.com/brpat/terraform-azure-linux-vm.git?ref=v1.1"
   # Required variables
   vm_name                      = var.vm_name
   location                     = var.location
