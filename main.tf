@@ -1,11 +1,18 @@
 data "azurerm_client_config" "current" {}
 
+
+resource "azurerm_resource_group" "vmrg" {
+  name     = var.resource_group_name
+  location = var.location
+}
+
+
 # Conditional creation of a new Key Vault if create_key_vault is true
 resource "azurerm_key_vault" "kv" {
   count               = var.create_key_vault ? 1 : 0
   name                = var.key_vault_name
   location            = var.location
-  resource_group_name = var.resource_group_name
+  resource_group_name = azurerm_resource_group.vmrg.name
   sku_name            = "standard"
 
   tenant_id = data.azurerm_client_config.current.tenant_id
@@ -14,8 +21,8 @@ resource "azurerm_key_vault" "kv" {
     tenant_id = data.azurerm_client_config.current.tenant_id
     object_id = data.azurerm_client_config.current.object_id
 
-    secret_permissions = ["Get", "List", "Set", "Delete"]
-    key_permissions    = ["Get", "List", "Create", "Delete"]
+    secret_permissions = ["Get", "List", "Set", "Delete", "Purge"]
+    key_permissions    = ["Get", "List", "Create", "Delete", "Purge"]
   }
 }
 
@@ -38,7 +45,7 @@ resource "azurerm_key_vault_secret" "ssh_key_secret" {
 data "azurerm_key_vault" "existing_kv" {
   count               = var.create_key_vault ? 0 : 1
   name                = var.key_vault_name
-  resource_group_name = var.key_vault_resource_group
+  resource_group_name = azurerm_resource_group.vmrg.name
 }
 
 data "azurerm_key_vault_secret" "existing_ssh_key" {
@@ -50,7 +57,7 @@ data "azurerm_key_vault_secret" "existing_ssh_key" {
 resource "azurerm_network_interface" "nic" {
   name                = "${var.vm_name}-nic"
   location            = var.location
-  resource_group_name = var.resource_group_name
+  resource_group_name = azurerm_resource_group.vmrg.name
 
   ip_configuration {
     name                          = var.nic_name
@@ -65,7 +72,7 @@ resource "azurerm_network_interface" "nic" {
 resource "azurerm_linux_virtual_machine" "vm" {
   name                = var.vm_name
   location            = var.location
-  resource_group_name = var.resource_group_name
+  resource_group_name = azurerm_resource_group.vmrg.name
   network_interface_ids = [
     azurerm_network_interface.nic.id
   ]
@@ -82,8 +89,8 @@ resource "azurerm_linux_virtual_machine" "vm" {
   }
   source_image_reference {
     publisher = "Canonical"
-    offer     = "UbuntuServer"
-    sku       = "22.04-LTS"
+    offer     = "ubuntu-24_04-lts"
+    sku       = "server"
     version   = "latest"
   }
   tags = var.tags
