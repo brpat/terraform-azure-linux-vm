@@ -35,12 +35,49 @@ module "linux_vm" {
   key_vault_resource_group  = var.key_vault_resource_group
   ssh_key_name              = var.ssh_key_name
 }
+```
 
-
-#### Optionally you can run this locally as an example started code has been provided in the /test folder. Update the test.tfvars as needed
+#### Optionally you can run this locally as an example started code has been provided in the /test folder. Add/Update the test.tfvars as needed
 
 ```hcl
 cd terraform-azure-linux-vm/test
 terraform init
 terraform plan --var-file test.tfvars
 ```
+
+** Example test.tfvars
+
+```hcl
+# VM configuration
+vm_name              = "test-linux-vm"
+location             = "eastus"
+resource_group_name  = "myResourceGroup"
+subnet_id            = "/subscriptions/SUBSCRIPTION_ID/resourceGroups/vnet-dev/providers/Microsoft.Network/virtualNetworks/demo-vnet-dev/subnets/compute"
+vm_size              = "Standard_DC1s_v2"  # az vm list-sizes --location "eastus"
+admin_username       = "azureuser"
+os_disk_type         = "Standard_LRS"
+os_disk_size         = 30
+tags = {
+  Environment = "Testing"
+  Project     = "TerraformModule"
+}
+
+# Network interface configuration
+nic_name                    = "test-linux-vm-nic"
+private_ip_address_allocation = "Dynamic"
+
+# Key Vault configuration
+create_key_vault            = true  # Set to true to create a new Key Vault
+key_vault_name              = "lvm-demo-kv"
+key_vault_resource_group    = "myResourceGroup"
+ssh_key_name                = "existing-ssh-key"
+
+# Backend storage configuration
+backend_resource_group_name = "backendResourceGroup"
+backend_storage_account_name = "terraformstateaccount"
+backend_container_name       = "tfstate"
+backend_key                  = "test-linux-vm.tfstate"
+
+```
+
+
