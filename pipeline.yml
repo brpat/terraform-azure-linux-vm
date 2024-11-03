@@ -1,0 +1,104 @@
+# Demo pipeline only. Modify as needed.
+
+trigger:
+  batch: true
+  branches:
+    include:
+      - main
+  paths:
+    exclude:
+      - README.md
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - name: backendServiceArm
+    value: $(backendServiceArm) # Secret variable in Azure DevOps
+  - name: backendAzureRmResourceGroupName
+    value: $(backendAzureRmResourceGroupName) # Secret variable in Azure DevOps
+  - name: backendAzureRmStorageAccountName
+    value: $(backendAzureRmStorageAccountName) # Secret variable in Azure DevOps
+  - name: backendAzureRmContainerName
+    value: $(backendAzureRmContainerName) # Secret variable in Azure DevOps
+  - name: backendAzureRmKey
+    value: '$(backendAzureRmKey)'
+
+stages:
+  - stage:
+    displayName: "Terraform Plan"
+    jobs:
+      - job: run-terraform-init
+        displayName: "Run Terraform Init and Plan"
+        steps:
+          - task: TerraformTaskV4@4
+            displayName: "Run Terraform Init"
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              backendServiceArm: ${{ variables.backendServiceArm }}
+              backendAzureRmResourceGroupName: ${{ variables.backendAzureRmResourceGroupName }}
+              backendAzureRmStorageAccountName: ${{ variables.backendAzureRmStorageAccountName }}
+              backendAzureRmContainerName: ${{ variables.backendAzureRmContainerName }}
+              backendAzureRmKey: ${{ variables.backendAzureRmKey }}
+              workingDirectory: test/
+
+          - task: CmdLine@2
+            displayName: "List Current Working Directory"
+            inputs:
+              script: |
+                ls -la 
+                pwd
+
+          - task: TerraformTaskV4@4
+            displayName: "Run Terraform Plan"
+            inputs:
+              provider: 'azurerm'
+              command: 'plan'
+              commandOptions: '--var-file tfvars/variables.tfvars'
+              environmentServiceNameAzureRM: ${{ variables.backendServiceArm }}
+              workingDirectory: test/
+
+  - stage:
+    displayName: "Terraform Apply"
+    jobs:
+      - job: user_val
+        displayName: "User Validation"
+        pool: server
+        steps:
+          - task: ManualValidation@0
+            inputs:
+              notifyUsers: 'jj@gmail.com'
+              instructions: 'ADO Pipeline Approval Needed'
+
+      - job: run-terraform-init-apply
+        dependsOn: user_val
+        displayName: "Run Terraform Init and Apply"
+        steps:
+          - task: TerraformTaskV4@4
+            displayName: "Run Terraform Init"
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              backendServiceArm: ${{ variables.backendServiceArm }}
+              backendAzureRmResourceGroupName: ${{ variables.backendAzureRmResourceGroupName }}
+              backendAzureRmStorageAccountName: ${{ variables.backendAzureRmStorageAccountName }}
+              backendAzureRmContainerName: ${{ variables.backendAzureRmContainerName }}
+              backendAzureRmKey: ${{ variables.backendAzureRmKey }}
+              workingDirectory: terraform-manifest/
+
+          - task: CmdLine@2
+            displayName: "List Current Working Directory"
+            inputs:
+              script: |
+                ls -la 
+                pwd
+
+          - task: TerraformTaskV4@4
+            displayName: "Run Terraform Apply"
+            inputs:
+              provider: 'azurerm'
+              command: 'apply'
+              commandOptions: '--var-file tfvars/variables.tfvars'
+              environmentServiceNameAzureRM: ${{ variables.backendServiceArm }}
+              workingDirectory: terraform-manifest/
